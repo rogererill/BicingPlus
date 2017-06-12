@@ -17,7 +17,8 @@ class MainActivity : AppCompatActivity(), MainView {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         component.inject(this)
-        presenter.test();
+
+        presenter.loadStations()
     }
 
     override fun showProgress() {
