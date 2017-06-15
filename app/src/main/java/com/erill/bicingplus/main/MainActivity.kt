@@ -6,9 +6,9 @@ import com.erill.bicingplus.*
 import com.erill.bicingplus.main.di.MainModule
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.android.gms.maps.model.MarkerOptions
 import javax.inject.Inject
 
@@ -39,6 +39,7 @@ class MainActivity : AppCompatActivity(), MainView {
         googleMap?.addMarker(MarkerOptions().position(bcn)
                 .title("My marker"))
         googleMap?.moveCamera(CameraUpdateFactory.newLatLngZoom(bcn, DEFAULT_ZOOM))
+        googleMap?.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, R.raw.style_json))
     }
 
 
