@@ -12,7 +12,7 @@ class MainPresenter(val view: MainView, val bicingManager: BicingManager) {
                 ?.subscribeOn(Schedulers.io())
                 ?.observeOn(AndroidSchedulers.mainThread())
                 ?.subscribe(
-                        { response -> Log.d("Next", "Estacions: ${response.stations.size}") },
+                        { response -> view.printStations(response) },
                         { error -> Log.e("Error", error.message) }
                 )
     }

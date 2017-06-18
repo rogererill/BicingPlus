@@ -8,7 +8,7 @@ import com.google.gson.annotations.SerializedName
 
 data class Station(
         @SerializedName("id") val id: String,
-        @SerializedName("type") val type: String,
+        @SerializedName("type") val type: BikeType,
         @SerializedName("latitude") val lat: String,
         @SerializedName("longitude") val lon: String,
         @SerializedName("streetName") val street: String,
