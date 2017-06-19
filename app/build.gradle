@@ -51,8 +51,8 @@ dependencies {
 
     compile 'com.squareup.okhttp3:logging-interceptor:3.8.0'
     compile 'com.squareup.okhttp3:okhttp:3.8.0'
-    compile 'com.google.android.gms:play-services-maps:9.6.0'
-    compile 'com.google.android.gms:play-services-location:9.6.0'
+    compile 'com.google.android.gms:play-services-maps:10.0.0'
+    compile 'com.google.android.gms:play-services-location:10.0.0'
 }
 repositories {
     mavenCentral()
