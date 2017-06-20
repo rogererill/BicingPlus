@@ -1,7 +1,11 @@
 package com.erill.bicingplus.main
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.*
+import android.graphics.drawable.Drawable
+import android.graphics.drawable.GradientDrawable
 import android.location.Location
 import android.os.Bundle
 import android.support.v4.app.ActivityCompat
@@ -20,12 +24,8 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.MapStyleOptions
-import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.gms.maps.model.*
 import javax.inject.Inject
-
 
 
 class MainActivity : AppCompatActivity(), MainView,
@@ -116,8 +116,7 @@ class MainActivity : AppCompatActivity(), MainView,
             latLong = LatLng(DEFAULT_LAT, DEFAULT_LON)
             zoomLevel = DEFAULT_ZOOM
         }
-
-        googleMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(latLong, zoomLevel))
+        googleMap?.animateCamera(CameraUpdateFactory.newCameraPosition(CameraPosition(latLong, zoomLevel, DEFAULT_TILT, 0f)))
         googleMap?.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, R.raw.style_json))
         googleMap?.uiSettings?.isZoomControlsEnabled = true
         checkLocation()
@@ -127,10 +126,6 @@ class MainActivity : AppCompatActivity(), MainView,
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
             googleMap?.isMyLocationEnabled = true
-            /*googleMap?.setOnMyLocationButtonClickListener({
-                loadLastLocation(googleMap, CLOSE_ZOOM)
-                true
-            })*/
         } else {
             val permissionArray = arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
             ActivityCompat.requestPermissions(this, permissionArray, LOCATION_REQUEST_CODE)
@@ -151,11 +146,62 @@ class MainActivity : AppCompatActivity(), MainView,
             val markerOptions = MarkerOptions()
                     .position(latLong)
                     .title(it.street + " " + it.number)
-            if (it.type == BikeType.ELECTRIC) {
-                markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
-            }
+            val isElectric = it.type == BikeType.ELECTRIC
+            val bikesNum = it.bikes.toFloat()
+            val markerBitmap: Bitmap = writeTextOnDrawable(R.drawable.marker_circle, it.bikes, isElectric)
+            markerOptions.icon(BitmapDescriptorFactory.fromBitmap(markerBitmap))
+            markerOptions.zIndex(bikesNum)
+
             googleMap?.addMarker(markerOptions)
         }
+    }
+
+    fun drawableToBitmap (drawable: Drawable): Bitmap {
+        val bitmap = Bitmap.createBitmap(drawable.intrinsicWidth, drawable.intrinsicHeight, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        drawable.setBounds(0, 0, canvas.width, canvas.height);
+        drawable.draw(canvas)
+        return bitmap
+    }
+
+    private fun writeTextOnDrawable(drawableId: Int, text: String, isElectric: Boolean): Bitmap {
+        val drawable = ContextCompat.getDrawable(this, drawableId) as GradientDrawable
+        val num = text.toInt()
+        when (num) {
+            0 -> drawable.setColor(ContextCompat.getColor(this,R.color.very_low_disponibility))
+            in 1..6 -> drawable.setColor(ContextCompat.getColor(this,R.color.low_disponibility))
+            in 7..12 -> drawable.setColor(ContextCompat.getColor(this,R.color.normal_disponibility))
+            in 13..18 -> drawable.setColor(ContextCompat.getColor(this,R.color.good_disponibility))
+            else -> drawable.setColor(ContextCompat.getColor(this,R.color.very_good_disponibility))
+        }
+        if (isElectric) {
+            drawable.setStroke(MARKER_ELECTRIC_STROKE_SIZE, ContextCompat.getColor(this,R.color.electric_bike_marker))
+        }
+        val bitmap = drawableToBitmap(drawable)
+        val markerBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+
+        val paint = Paint()
+        paint.style = Paint.Style.FILL
+        paint.color = Color.WHITE
+        paint.typeface = Typeface.create("Helvetica", Typeface.BOLD)
+        paint.textAlign = Paint.Align.CENTER
+        paint.textSize = convertToPixels(this, MARKER_TEXT_SIZE)
+        paint.getTextBounds(text, 0, text.length, Rect())
+
+        val canvas = Canvas(markerBitmap)
+
+        val x = canvas.width / 2 - 2     //-2 used to regulate x position offset
+        val distanceBaseLineToCenter = (paint.descent() + paint.ascent()) / 2
+        val y = canvas.height / 2 - distanceBaseLineToCenter
+
+        canvas.drawText(text, x.toFloat(), y, paint)
+
+        return markerBitmap
+    }
+
+    fun convertToPixels(context: Context, dp: Int): Float {
+        val conversionScale = context.resources.displayMetrics.density
+        return (dp * conversionScale + 0.5f)
     }
 
     override fun showProgress() {
@@ -178,6 +224,4 @@ class MainActivity : AppCompatActivity(), MainView,
     override fun onConnectionFailed(connectionResult: ConnectionResult) {
         Log.d(TAG, "Connection Failed: ${connectionResult.errorMessage}")
     }
-
-
 }

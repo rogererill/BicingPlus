@@ -3,4 +3,12 @@
     <color name="colorPrimary">#3F51B5</color>
     <color name="colorPrimaryDark">#303F9F</color>
     <color name="colorAccent">#FF4081</color>
+
+    <color name="very_low_disponibility">#ce0000</color>
+    <color name="low_disponibility">#d86f00</color>
+    <color name="normal_disponibility">#ada700</color>
+    <color name="good_disponibility">#78af38</color>
+    <color name="very_good_disponibility">#007c08</color>
+
+    <color name="electric_bike_marker">#1811db</color>
 </resources>
