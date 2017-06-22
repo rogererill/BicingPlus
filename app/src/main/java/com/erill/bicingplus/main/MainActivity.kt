@@ -95,9 +95,11 @@ class MainActivity : AppCompatActivity(), MainView,
         fusedLocationClient?.requestLocationUpdates(googleApiClient, locationRequest) {
             location ->
             Log.d(TAG, "New location ${location.latitude} - ${location.longitude}")
+            if (lastLocation == null) {
+                val cameraUpdate = CameraUpdateFactory.newLatLngZoom(LatLng(location.latitude, location.longitude), CLOSE_ZOOM)
+                googleMap?.animateCamera(cameraUpdate)
+            }
             lastLocation = location
-            val cameraUpdate = CameraUpdateFactory.newLatLngZoom(LatLng(location.latitude, location.longitude), CLOSE_ZOOM)
-            googleMap?.animateCamera(cameraUpdate)
         }
     }
 
