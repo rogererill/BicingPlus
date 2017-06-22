@@ -8,10 +8,13 @@ import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.location.Location
 import android.os.Bundle
+import android.support.design.widget.Snackbar
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
+import android.view.Menu
+import android.view.MenuItem
 import com.erill.bicingplus.*
 import com.erill.bicingplus.main.di.MainModule
 import com.erill.bicingplus.ws.responses.BicingResponse
@@ -25,6 +28,7 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
+import kotlinx.android.synthetic.main.activity_main.*
 import javax.inject.Inject
 
 
@@ -89,6 +93,21 @@ class MainActivity : AppCompatActivity(), MainView,
     override fun onPause() {
         super.onPause()
         fusedLocationClient?.removeLocationUpdates(googleApiClient) { Log.d(TAG, "Stop updates")}
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            R.id.refresh_option -> {
+                presenter.loadStations()
+                return true
+            }
+        }
+        return super.onOptionsItemSelected(item)
     }
 
     private fun startLocationUpdates() {
@@ -177,7 +196,10 @@ class MainActivity : AppCompatActivity(), MainView,
             else -> drawable.setColor(ContextCompat.getColor(this,R.color.very_good_disponibility))
         }
         if (isElectric) {
-            drawable.setStroke(MARKER_ELECTRIC_STROKE_SIZE, ContextCompat.getColor(this,R.color.electric_bike_marker))
+            drawable.setStroke(MARKER_ELECTRIC_STROKE_SIZE, ContextCompat.getColor(this, R.color.electric_bike_marker))
+        }
+        else {
+            drawable.setStroke(MARKER_ELECTRIC_STROKE_SIZE, ContextCompat.getColor(this, android.R.color.black))
         }
         val bitmap = drawableToBitmap(drawable)
         val markerBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
@@ -211,7 +233,8 @@ class MainActivity : AppCompatActivity(), MainView,
     }
 
     override fun hideProgress() {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        val snackbar = Snackbar.make(coordinator_main, R.string.update_complete, Snackbar.LENGTH_SHORT)
+        snackbar.show()
     }
 
     override fun onConnected(bundle: Bundle?) {
