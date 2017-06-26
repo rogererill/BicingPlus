@@ -1,6 +1,7 @@
 package com.erill.bicingplus.main
 
 import android.Manifest
+import android.app.ProgressDialog
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.*
@@ -31,7 +32,6 @@ import com.google.android.gms.maps.model.*
 import kotlinx.android.synthetic.main.activity_main.*
 import javax.inject.Inject
 
-
 class MainActivity : AppCompatActivity(), MainView,
         GoogleApiClient.OnConnectionFailedListener,
         GoogleApiClient.ConnectionCallbacks {
@@ -47,6 +47,7 @@ class MainActivity : AppCompatActivity(), MainView,
     var fusedLocationClient: FusedLocationProviderApi? = null
     var lastLocation: Location? = null
     var locationRequest: LocationRequest? = null
+    var progressDialog: ProgressDialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -162,6 +163,9 @@ class MainActivity : AppCompatActivity(), MainView,
     }
 
     override fun printStations(response: BicingResponse?) {
+        val snackbar = Snackbar.make(coordinator_main, R.string.update_complete, Snackbar.LENGTH_SHORT)
+        snackbar.show()
+        googleMap?.clear()
         response?.stations?.forEach {
             val latLong: LatLng = LatLng(it.lat.toDouble(), it.lon.toDouble())
             val markerOptions = MarkerOptions()
@@ -228,12 +232,29 @@ class MainActivity : AppCompatActivity(), MainView,
         return (dp * conversionScale + 0.5f)
     }
 
+
+    private fun getProgress(): ProgressDialog {
+        if (progressDialog == null) {
+            progressDialog = ProgressDialog(this)
+            progressDialog!!.setCancelable(false)
+            progressDialog!!.isIndeterminate = true
+            progressDialog!!.setMessage(getString(R.string.loading))
+        }
+        return progressDialog as ProgressDialog
+    }
+
     override fun showProgress() {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        if (getProgress().isShowing) return
+        getProgress().show()
     }
 
     override fun hideProgress() {
-        val snackbar = Snackbar.make(coordinator_main, R.string.update_complete, Snackbar.LENGTH_SHORT)
+        if (getProgress().isShowing) getProgress().dismiss()
+    }
+
+    override fun showError() {
+        val snackbar = Snackbar.make(coordinator_main, R.string.update_error, Snackbar.LENGTH_SHORT)
+        snackbar.view.setBackgroundColor(ContextCompat.getColor(this, R.color.colorPrimary))
         snackbar.show()
     }
 

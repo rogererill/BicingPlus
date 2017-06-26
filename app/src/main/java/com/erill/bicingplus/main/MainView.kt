@@ -9,4 +9,5 @@ interface MainView {
     fun showProgress()
     fun hideProgress()
     fun printStations(response: BicingResponse?)
+    fun showError()
 }

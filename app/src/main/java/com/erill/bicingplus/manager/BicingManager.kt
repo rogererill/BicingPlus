@@ -4,8 +4,6 @@ import com.erill.bicingplus.App
 import com.erill.bicingplus.ws.BicingApi
 import com.erill.bicingplus.ws.responses.BicingResponse
 import rx.Observable
-import rx.android.schedulers.AndroidSchedulers
-import rx.schedulers.Schedulers
 
 /**
  * Created by Roger on 11/6/17.

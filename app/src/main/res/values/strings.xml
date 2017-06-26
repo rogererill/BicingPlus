@@ -2,4 +2,6 @@
     <string name="app_name">BicingPlus</string>
     <string name="title_activity_testactivity">testactivity</string>
     <string name="update_complete">Dades actualitzades correctament</string>
+    <string name="update_error">Error actualitzant les dades</string>
+    <string name="loading">Carregant dades</string>
 </resources>
