@@ -2,4 +2,6 @@
 <resources>
     <dimen name="marker_size">24dp</dimen>
     <dimen name="stroke_marker_size">2dp</dimen>
+    <dimen name="fab_size">56dp</dimen>
+    <dimen name="default_margin">16dp</dimen>
 </resources>

@@ -49,6 +49,8 @@ class MainActivity : AppCompatActivity(), MainView,
     var locationRequest: LocationRequest? = null
     var progressDialog: ProgressDialog? = null
 
+    var currentInfoType: InfoType = InfoType.BIKES
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -58,12 +60,14 @@ class MainActivity : AppCompatActivity(), MainView,
         createLocationRequest()
         fusedLocationClient = LocationServices.FusedLocationApi
 
-        presenter.loadStations()
+        presenter.loadStations(currentInfoType)
 
         val mapFragment: SupportMapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync {
             loadedMap -> loadLastLocation(loadedMap)
         }
+
+        fab_change_mode.setOnClickListener { presenter.onChangeSetting(currentInfoType) }
     }
 
     @Synchronized private fun buildGoogleApiClient() {
@@ -104,7 +108,7 @@ class MainActivity : AppCompatActivity(), MainView,
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.refresh_option -> {
-                presenter.loadStations()
+                presenter.loadStations(currentInfoType)
                 return true
             }
         }
@@ -162,9 +166,17 @@ class MainActivity : AppCompatActivity(), MainView,
         }
     }
 
-    override fun printStations(response: BicingResponse?) {
-        val snackbar = Snackbar.make(coordinator_main, R.string.update_complete, Snackbar.LENGTH_SHORT)
-        snackbar.show()
+    override fun setInfoType(infoType: InfoType) {
+        currentInfoType = infoType
+        val resourceId: Int
+        when (currentInfoType) {
+            InfoType.BIKES -> resourceId = R.drawable.ic_directions_bike_white_24dp
+            InfoType.PARKING -> resourceId = R.drawable.ic_local_parking_white_24dp
+        }
+        fab_change_mode.setImageDrawable(ContextCompat.getDrawable(this, resourceId))
+    }
+
+    override fun printStations(response: BicingResponse?, infoType: InfoType) {
         googleMap?.clear()
         response?.stations?.forEach {
             val latLong: LatLng = LatLng(it.lat.toDouble(), it.lon.toDouble())
@@ -172,10 +184,14 @@ class MainActivity : AppCompatActivity(), MainView,
                     .position(latLong)
                     .title(it.street + " " + it.number)
             val isElectric = it.type == BikeType.ELECTRIC
-            val bikesNum = it.bikes.toFloat()
-            val markerBitmap: Bitmap = writeTextOnDrawable(R.drawable.marker_circle, it.bikes, isElectric)
+            val valueStr = when (infoType) {
+                InfoType.BIKES -> it.bikes
+                InfoType.PARKING -> it.slots
+            }
+            val valueNum = valueStr.toFloat()
+            val markerBitmap: Bitmap = writeTextOnDrawable(R.drawable.marker_circle, valueStr, isElectric)
             markerOptions.icon(BitmapDescriptorFactory.fromBitmap(markerBitmap))
-            markerOptions.zIndex(bikesNum)
+            markerOptions.zIndex(valueNum)
 
             googleMap?.addMarker(markerOptions)
         }
@@ -250,6 +266,11 @@ class MainActivity : AppCompatActivity(), MainView,
 
     override fun hideProgress() {
         if (getProgress().isShowing) getProgress().dismiss()
+    }
+
+    override fun showSuccess() {
+        val snackbar = Snackbar.make(coordinator_main, R.string.update_complete, Snackbar.LENGTH_SHORT)
+        snackbar.show()
     }
 
     override fun showError() {

@@ -8,6 +8,8 @@ import com.erill.bicingplus.ws.responses.BicingResponse
 interface MainView {
     fun showProgress()
     fun hideProgress()
-    fun printStations(response: BicingResponse?)
+    fun printStations(response: BicingResponse?, infoType: InfoType)
+    fun showSuccess()
     fun showError()
+    fun setInfoType(infoType: InfoType)
 }
