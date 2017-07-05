@@ -13,9 +13,11 @@ import android.support.design.widget.Snackbar
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
 import android.support.v7.app.AppCompatActivity
+import android.support.v7.widget.SearchView
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.SimpleCursorAdapter
 import com.erill.bicingplus.*
 import com.erill.bicingplus.main.di.MainModule
 import com.erill.bicingplus.ws.responses.BicingResponse
@@ -50,21 +52,23 @@ class MainActivity : AppCompatActivity(), MainView,
     var progressDialog: ProgressDialog? = null
 
     var currentInfoType: InfoType = InfoType.BIKES
+    val suggestionAdapter: SimpleCursorAdapter? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         component.inject(this)
+        setSupportActionBar(toolbar)
 
         buildGoogleApiClient()
         createLocationRequest()
         fusedLocationClient = LocationServices.FusedLocationApi
 
-        presenter.loadStations(currentInfoType)
-
         val mapFragment: SupportMapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync {
-            loadedMap -> loadLastLocation(loadedMap)
+            loadedMap ->
+                loadLastLocation(loadedMap)
+                presenter.loadStations(currentInfoType)
         }
 
         fab_change_mode.setOnClickListener { presenter.onChangeSetting(currentInfoType) }
@@ -102,6 +106,23 @@ class MainActivity : AppCompatActivity(), MainView,
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.menu, menu)
+        val searchItem = menu.findItem(R.id.search)
+        val refreshItem = menu.findItem(R.id.refresh_option)
+        val search: SearchView = searchItem.actionView as SearchView
+        search.setOnSearchClickListener { refreshItem.isVisible = false }
+        search.setOnCloseListener {
+            refreshItem.isVisible = true
+            false
+        }
+        search.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                return false //TODO
+            }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                return false //TODO
+            }
+        })
         return true
     }
 

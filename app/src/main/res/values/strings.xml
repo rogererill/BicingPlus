@@ -4,4 +4,6 @@
     <string name="update_complete">Dades actualitzades correctament</string>
     <string name="update_error">Error actualitzant les dades</string>
     <string name="loading">Carregant dades</string>
+    <string name="refresh">Refresh</string>
+    <string name="search_title">Search</string>
 </resources>
