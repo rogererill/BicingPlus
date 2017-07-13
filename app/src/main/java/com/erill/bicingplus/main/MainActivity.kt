@@ -2,21 +2,24 @@ package com.erill.bicingplus.main
 
 import android.Manifest
 import android.app.ProgressDialog
+import android.app.SearchManager
 import android.content.Context
 import android.content.pm.PackageManager
+import android.database.MatrixCursor
 import android.graphics.*
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.location.Location
 import android.os.Bundle
+import android.provider.BaseColumns
 import android.support.design.widget.Snackbar
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
 import android.support.v7.app.AppCompatActivity
-import android.support.v7.widget.SearchView
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.SearchView
 import android.widget.SimpleCursorAdapter
 import com.erill.bicingplus.*
 import com.erill.bicingplus.main.di.MainModule
@@ -52,7 +55,8 @@ class MainActivity : AppCompatActivity(), MainView,
     var progressDialog: ProgressDialog? = null
 
     var currentInfoType: InfoType = InfoType.BIKES
-    val suggestionAdapter: SimpleCursorAdapter? = null
+    val suggestions = arrayOf("Avinguda", "Carrer Dalt", "Carrer Baix", "Passeig", "Passatge") //TODO
+    var suggestionAdapter: SimpleCursorAdapter? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -72,6 +76,19 @@ class MainActivity : AppCompatActivity(), MainView,
         }
 
         fab_change_mode.setOnClickListener { presenter.onChangeSetting(currentInfoType) }
+        setupSuggestionsAdapter();
+    }
+
+    private fun setupSuggestionsAdapter() {
+        val from = arrayOf(SearchManager.SUGGEST_COLUMN_TEXT_1)
+        val to = intArrayOf(R.id.text_suggestion)
+        suggestionAdapter = SimpleCursorAdapter(this,
+                R.layout.row_hint,
+                null,
+                from,
+                to,
+                0)
+
     }
 
     @Synchronized private fun buildGoogleApiClient() {
@@ -109,6 +126,9 @@ class MainActivity : AppCompatActivity(), MainView,
         val searchItem = menu.findItem(R.id.search)
         val refreshItem = menu.findItem(R.id.refresh_option)
         val search: SearchView = searchItem.actionView as SearchView
+        val searchManager: SearchManager = getSystemService(Context.SEARCH_SERVICE) as SearchManager
+        search.setSearchableInfo(searchManager.getSearchableInfo(componentName))
+        search.suggestionsAdapter = suggestionAdapter
         search.setOnSearchClickListener { refreshItem.isVisible = false }
         search.setOnCloseListener {
             refreshItem.isVisible = true
@@ -116,14 +136,43 @@ class MainActivity : AppCompatActivity(), MainView,
         }
         search.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
-                return false //TODO
+                search.clearFocus()
+                return true
             }
 
             override fun onQueryTextChange(newText: String?): Boolean {
-                return false //TODO
+                if (newText != null) populateAdapter(newText)
+                return false
+            }
+        })
+        search.setOnSuggestionListener(object : SearchView.OnSuggestionListener {
+            override fun onSuggestionSelect(position: Int): Boolean {
+                return false
+            }
+
+            override fun onSuggestionClick(position: Int): Boolean {
+                search.setQuery(suggestions[position], true)
+                search.clearFocus()
+                val cameraUpdate = CameraUpdateFactory.newLatLngZoom(LatLng(DEFAULT_LAT, DEFAULT_LON), CLOSE_ZOOM)
+                googleMap?.animateCamera(cameraUpdate)
+                return true
             }
         })
         return true
+    }
+
+    private fun populateAdapter(newText: String) {
+        val strings = arrayOf(BaseColumns._ID, SearchManager.SUGGEST_COLUMN_TEXT_1,
+                SearchManager.SUGGEST_COLUMN_INTENT_DATA)
+        val c: MatrixCursor = MatrixCursor(strings)
+        for (i in 0 until suggestions.size) {
+            val suggestionCity = suggestions[i].toLowerCase()
+            val query = newText.toLowerCase()
+            if (suggestionCity.startsWith(query)) {
+                c.addRow(arrayOf(i, suggestions[i], suggestions[i]))
+            }
+        }
+        suggestionAdapter?.changeCursor(c)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
