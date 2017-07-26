@@ -55,7 +55,6 @@ class MainActivity : AppCompatActivity(), MainView,
     var progressDialog: ProgressDialog? = null
 
     var currentInfoType: InfoType = InfoType.BIKES
-    val suggestions = arrayOf("Avinguda", "Carrer Dalt", "Carrer Baix", "Passeig", "Passatge") //TODO
     var suggestionAdapter: SimpleCursorAdapter? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -118,7 +117,9 @@ class MainActivity : AppCompatActivity(), MainView,
 
     override fun onPause() {
         super.onPause()
-        fusedLocationClient?.removeLocationUpdates(googleApiClient) { Log.d(TAG, "Stop updates")}
+        if (googleApiClient?.isConnected as Boolean) {
+            fusedLocationClient?.removeLocationUpdates(googleApiClient) { Log.d(TAG, "Stop updates")}
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -127,11 +128,16 @@ class MainActivity : AppCompatActivity(), MainView,
         val refreshItem = menu.findItem(R.id.refresh_option)
         val search: SearchView = searchItem.actionView as SearchView
         val searchManager: SearchManager = getSystemService(Context.SEARCH_SERVICE) as SearchManager
+        search.maxWidth = Int.MAX_VALUE
         search.setSearchableInfo(searchManager.getSearchableInfo(componentName))
         search.suggestionsAdapter = suggestionAdapter
-        search.setOnSearchClickListener { refreshItem.isVisible = false }
+        search.setOnSearchClickListener {
+            refreshItem.isVisible = false
+            supportActionBar?.setDisplayShowTitleEnabled(false)
+        }
         search.setOnCloseListener {
             refreshItem.isVisible = true
+            supportActionBar?.setDisplayShowTitleEnabled(true)
             false
         }
         search.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
@@ -151,7 +157,7 @@ class MainActivity : AppCompatActivity(), MainView,
             }
 
             override fun onSuggestionClick(position: Int): Boolean {
-                search.setQuery(suggestions[position], true)
+                search.setQuery(presenter.suggestions[position], true)
                 search.clearFocus()
                 val cameraUpdate = CameraUpdateFactory.newLatLngZoom(LatLng(DEFAULT_LAT, DEFAULT_LON), CLOSE_ZOOM)
                 googleMap?.animateCamera(cameraUpdate)
@@ -165,11 +171,11 @@ class MainActivity : AppCompatActivity(), MainView,
         val strings = arrayOf(BaseColumns._ID, SearchManager.SUGGEST_COLUMN_TEXT_1,
                 SearchManager.SUGGEST_COLUMN_INTENT_DATA)
         val c: MatrixCursor = MatrixCursor(strings)
-        for (i in 0 until suggestions.size) {
-            val suggestionCity = suggestions[i].toLowerCase()
+        for (i in 0 until presenter.suggestions.size) {
+            val suggestionCity = presenter.suggestions[i].toLowerCase()
             val query = newText.toLowerCase()
-            if (suggestionCity.startsWith(query)) {
-                c.addRow(arrayOf(i, suggestions[i], suggestions[i]))
+            if (suggestionCity.contains(query)) {
+                c.addRow(arrayOf(i, presenter.suggestions[i], presenter.suggestions[i]))
             }
         }
         suggestionAdapter?.changeCursor(c)
@@ -343,10 +349,18 @@ class MainActivity : AppCompatActivity(), MainView,
         snackbar.show()
     }
 
-    override fun showError() {
-        val snackbar = Snackbar.make(coordinator_main, R.string.update_error, Snackbar.LENGTH_SHORT)
+    private fun showErrorWithCode(errorStringId: Int) {
+        val snackbar = Snackbar.make(coordinator_main, errorStringId, Snackbar.LENGTH_SHORT)
         snackbar.view.setBackgroundColor(ContextCompat.getColor(this, R.color.colorPrimary))
         snackbar.show()
+    }
+
+    override fun showError() {
+        showErrorWithCode(R.string.update_error)
+    }
+
+    override fun showTimeOutError() {
+        showErrorWithCode(R.string.network_error)
     }
 
     override fun onConnected(bundle: Bundle?) {

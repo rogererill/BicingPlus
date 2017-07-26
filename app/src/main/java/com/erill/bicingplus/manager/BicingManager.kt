@@ -4,6 +4,7 @@ import com.erill.bicingplus.App
 import com.erill.bicingplus.ws.BicingApi
 import com.erill.bicingplus.ws.responses.BicingResponse
 import rx.Observable
+import java.util.concurrent.TimeUnit
 
 /**
  * Created by Roger on 11/6/17.
@@ -17,5 +18,6 @@ class BicingManager(app: App, val bicingApi: BicingApi) {
 
     fun loadStations() : Observable<BicingResponse>? {
         return bicingApi.getBicingInfo()
+                .timeout(10, TimeUnit.SECONDS)
     }
 }

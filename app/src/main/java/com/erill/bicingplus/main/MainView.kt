@@ -12,4 +12,5 @@ interface MainView {
     fun showSuccess()
     fun showError()
     fun setInfoType(infoType: InfoType)
+    fun showTimeOutError()
 }

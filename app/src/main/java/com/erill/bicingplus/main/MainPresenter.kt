@@ -5,10 +5,12 @@ import com.erill.bicingplus.manager.BicingManager
 import com.erill.bicingplus.ws.responses.BicingResponse
 import rx.android.schedulers.AndroidSchedulers
 import rx.schedulers.Schedulers
+import java.util.concurrent.TimeoutException
 
 class MainPresenter(val view: MainView, val bicingManager: BicingManager) {
 
     var currentResponse: BicingResponse? = null
+    var suggestions: ArrayList<String> = ArrayList()
 
     fun loadStations(infoType: InfoType) : Unit {
         view.showProgress()
@@ -19,16 +21,27 @@ class MainPresenter(val view: MainView, val bicingManager: BicingManager) {
                         {
                             response ->
                                 currentResponse = response
+                                createSuggestions(response)
                                 view.printStations(response, infoType)
                                 view.showSuccess()
                                 view.hideProgress()
                         },
                         {
-                            error -> Log.e("ErrorMain", error.message)
-                            view.showError()
+                            error ->
+                            if (error.message != null) Log.e("ErrorMain", error.message)
+                            if (error is TimeoutException) view.showTimeOutError()
+                            else view.showError()
                             view.hideProgress()
                         }
                 )
+    }
+
+    private fun createSuggestions(response: BicingResponse?) {
+        suggestions.clear()
+        response?.stations?.forEach {
+            val name = it.id + " - " + it.street + ", " + it.number
+            suggestions.add(name)
+        }
     }
 
     fun onChangeSetting(currentInfoType: InfoType) {
