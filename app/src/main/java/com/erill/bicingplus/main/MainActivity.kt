@@ -5,6 +5,7 @@ import android.app.ProgressDialog
 import android.app.SearchManager
 import android.content.Context
 import android.content.pm.PackageManager
+import android.database.Cursor
 import android.database.MatrixCursor
 import android.graphics.*
 import android.graphics.drawable.Drawable
@@ -157,9 +158,11 @@ class MainActivity : AppCompatActivity(), MainView,
             }
 
             override fun onSuggestionClick(position: Int): Boolean {
-                search.setQuery(presenter.suggestions[position], true)
+                val cursor = search.suggestionsAdapter.getItem(position) as Cursor
+                val suggestionName: String = cursor.getString(1)
+                search.setQuery(presenter.getSuggestion(suggestionName), true)
                 search.clearFocus()
-                val cameraUpdate = CameraUpdateFactory.newLatLngZoom(LatLng(DEFAULT_LAT, DEFAULT_LON), CLOSE_ZOOM)
+                val cameraUpdate = CameraUpdateFactory.newLatLngZoom(presenter.getLatLongForPosition(suggestionName), CLOSE_ZOOM)
                 googleMap?.animateCamera(cameraUpdate)
                 return true
             }
