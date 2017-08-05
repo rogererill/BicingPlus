@@ -1,5 +1,8 @@
 package com.erill.bicingplus.main
 
+import android.app.SearchManager
+import android.database.MatrixCursor
+import android.provider.BaseColumns
 import android.util.Log
 import com.erill.bicingplus.DEFAULT_LAT
 import com.erill.bicingplus.DEFAULT_LON
@@ -78,5 +81,27 @@ class MainPresenter(val view: MainView, val bicingManager: BicingManager) {
         val station = getStationFromSuggestion(suggestionName)
         if (station != null) return printStationForSuggestion(station)
         return ""
+    }
+
+    fun getSuggestionMatrixCursor(newText: String): MatrixCursor {
+        val strings = arrayOf(BaseColumns._ID, SearchManager.SUGGEST_COLUMN_TEXT_1,
+                SearchManager.SUGGEST_COLUMN_INTENT_DATA)
+        val c: MatrixCursor = MatrixCursor(strings)
+        for (i in 0 until suggestions.size) {
+            val suggestionCity = suggestions[i].toLowerCase()
+            val query = newText.toLowerCase()
+            if (suggestionCity.contains(query)) {
+                c.addRow(arrayOf(i, suggestions[i], suggestions[i]))
+            }
+        }
+        return c
+    }
+
+    fun getAvailabilities(number: Int): AvailabilityType {
+        val availabilities = AvailabilityType.values()
+        availabilities.forEach {
+            if (number <= it.lowerThreshold) return it
+        }
+        return availabilities.last()
     }
 }

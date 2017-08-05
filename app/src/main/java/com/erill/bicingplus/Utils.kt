@@ -19,6 +19,11 @@ fun ViewGroup.inflate(@LayoutRes layoutRes: Int, attachToRoot: Boolean = false):
     return LayoutInflater.from(context).inflate(layoutRes, this, attachToRoot)
 }
 
+fun Context.convertToPixels(dp: Int): Float {
+    val conversionScale = resources.displayMetrics.density
+    return (dp * conversionScale + 0.5f)
+}
+
 inline fun <reified T : View> View.find(@IdRes idRes: Int): T = findViewById(idRes) as T
 
 fun View.show() = run { visibility = View.VISIBLE }

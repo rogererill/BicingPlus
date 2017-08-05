@@ -7,4 +7,6 @@
     <string name="loading">Carregant dades</string>
     <string name="refresh">Refresh</string>
     <string name="search_title">Search</string>
+    <string name="showing_bikes">Mostrant bicis disponibles</string>
+    <string name="showing_parking">Mostrant aparcaments disponibles</string>
 </resources>

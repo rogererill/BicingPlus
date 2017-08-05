@@ -12,7 +12,6 @@ import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.location.Location
 import android.os.Bundle
-import android.provider.BaseColumns
 import android.support.design.widget.Snackbar
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
@@ -66,29 +65,35 @@ class MainActivity : AppCompatActivity(), MainView,
 
         buildGoogleApiClient()
         createLocationRequest()
-        fusedLocationClient = LocationServices.FusedLocationApi
 
+        setupMapAndLoadStations()
+        setupSuggestionsAdapter()
+
+        fusedLocationClient = LocationServices.FusedLocationApi
+        fab_change_mode.setOnClickListener { presenter.onChangeSetting(currentInfoType) }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (googleApiClient?.isConnected as Boolean) {
+            startLocationUpdates()
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (googleApiClient?.isConnected as Boolean) {
+            fusedLocationClient?.removeLocationUpdates(googleApiClient) { Log.d(TAG, "Stop updates")}
+        }
+    }
+
+    private fun setupMapAndLoadStations() {
         val mapFragment: SupportMapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync {
             loadedMap ->
-                loadLastLocation(loadedMap)
-                presenter.loadStations(currentInfoType)
+            loadLastLocation(loadedMap)
+            presenter.loadStations(currentInfoType)
         }
-
-        fab_change_mode.setOnClickListener { presenter.onChangeSetting(currentInfoType) }
-        setupSuggestionsAdapter();
-    }
-
-    private fun setupSuggestionsAdapter() {
-        val from = arrayOf(SearchManager.SUGGEST_COLUMN_TEXT_1)
-        val to = intArrayOf(R.id.text_suggestion)
-        suggestionAdapter = SimpleCursorAdapter(this,
-                R.layout.row_hint,
-                null,
-                from,
-                to,
-                0)
-
     }
 
     @Synchronized private fun buildGoogleApiClient() {
@@ -109,17 +114,15 @@ class MainActivity : AppCompatActivity(), MainView,
         locationRequest?.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
     }
 
-    override fun onResume() {
-        super.onResume()
-        if (googleApiClient?.isConnected as Boolean) {
-            startLocationUpdates()
-        }
-    }
-
-    override fun onPause() {
-        super.onPause()
-        if (googleApiClient?.isConnected as Boolean) {
-            fusedLocationClient?.removeLocationUpdates(googleApiClient) { Log.d(TAG, "Stop updates")}
+    private fun startLocationUpdates() {
+        fusedLocationClient?.requestLocationUpdates(googleApiClient, locationRequest) {
+            location ->
+            Log.d(TAG, "New location ${location.latitude} - ${location.longitude}")
+            if (lastLocation == null) {
+                val cameraUpdate = CameraUpdateFactory.newLatLngZoom(LatLng(location.latitude, location.longitude), CLOSE_ZOOM)
+                googleMap?.animateCamera(cameraUpdate)
+            }
+            lastLocation = location
         }
     }
 
@@ -129,6 +132,21 @@ class MainActivity : AppCompatActivity(), MainView,
         val refreshItem = menu.findItem(R.id.refresh_option)
         val search: SearchView = searchItem.actionView as SearchView
         val searchManager: SearchManager = getSystemService(Context.SEARCH_SERVICE) as SearchManager
+        setupSearchView(search, searchManager, refreshItem)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            R.id.refresh_option -> {
+                presenter.loadStations(currentInfoType)
+                return true
+            }
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
+    private fun setupSearchView(search: SearchView, searchManager: SearchManager, refreshItem: MenuItem) {
         search.maxWidth = Int.MAX_VALUE
         search.setSearchableInfo(searchManager.getSearchableInfo(componentName))
         search.suggestionsAdapter = suggestionAdapter
@@ -167,44 +185,25 @@ class MainActivity : AppCompatActivity(), MainView,
                 return true
             }
         })
-        return true
+    }
+
+    private fun setupSuggestionsAdapter() {
+        val from = arrayOf(SearchManager.SUGGEST_COLUMN_TEXT_1)
+        val to = intArrayOf(R.id.text_suggestion)
+        suggestionAdapter = SimpleCursorAdapter(this,
+                R.layout.row_hint,
+                null,
+                from,
+                to,
+                0)
+
     }
 
     private fun populateAdapter(newText: String) {
-        val strings = arrayOf(BaseColumns._ID, SearchManager.SUGGEST_COLUMN_TEXT_1,
-                SearchManager.SUGGEST_COLUMN_INTENT_DATA)
-        val c: MatrixCursor = MatrixCursor(strings)
-        for (i in 0 until presenter.suggestions.size) {
-            val suggestionCity = presenter.suggestions[i].toLowerCase()
-            val query = newText.toLowerCase()
-            if (suggestionCity.contains(query)) {
-                c.addRow(arrayOf(i, presenter.suggestions[i], presenter.suggestions[i]))
-            }
-        }
-        suggestionAdapter?.changeCursor(c)
+        val cursor: MatrixCursor = presenter.getSuggestionMatrixCursor(newText)
+        suggestionAdapter?.changeCursor(cursor)
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            R.id.refresh_option -> {
-                presenter.loadStations(currentInfoType)
-                return true
-            }
-        }
-        return super.onOptionsItemSelected(item)
-    }
-
-    private fun startLocationUpdates() {
-        fusedLocationClient?.requestLocationUpdates(googleApiClient, locationRequest) {
-            location ->
-            Log.d(TAG, "New location ${location.latitude} - ${location.longitude}")
-            if (lastLocation == null) {
-                val cameraUpdate = CameraUpdateFactory.newLatLngZoom(LatLng(location.latitude, location.longitude), CLOSE_ZOOM)
-                googleMap?.animateCamera(cameraUpdate)
-            }
-            lastLocation = location
-        }
-    }
 
     private fun loadLastLocation(loadedMap: GoogleMap?) {
 
@@ -224,10 +223,10 @@ class MainActivity : AppCompatActivity(), MainView,
         googleMap?.animateCamera(CameraUpdateFactory.newCameraPosition(CameraPosition(latLong, zoomLevel, DEFAULT_TILT, 0f)))
         googleMap?.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, R.raw.style_json))
         googleMap?.uiSettings?.isZoomControlsEnabled = true
-        checkLocation()
+        checkLocationPermission()
     }
 
-    private fun checkLocation() {
+    private fun checkLocationPermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
             googleMap?.isMyLocationEnabled = true
@@ -249,8 +248,14 @@ class MainActivity : AppCompatActivity(), MainView,
         currentInfoType = infoType
         val resourceId: Int
         when (currentInfoType) {
-            InfoType.BIKES -> resourceId = R.drawable.ic_directions_bike_white_24dp
-            InfoType.PARKING -> resourceId = R.drawable.ic_local_parking_white_24dp
+            InfoType.BIKES -> {
+                resourceId = R.drawable.ic_directions_bike_white_24dp
+                showSnackbarMessage(R.string.showing_bikes)
+            }
+            InfoType.PARKING -> {
+                resourceId = R.drawable.ic_local_parking_white_24dp
+                showSnackbarMessage(R.string.showing_parking)
+            }
         }
         fab_change_mode.setImageDrawable(ContextCompat.getDrawable(this, resourceId))
     }
@@ -279,20 +284,20 @@ class MainActivity : AppCompatActivity(), MainView,
     fun drawableToBitmap (drawable: Drawable): Bitmap {
         val bitmap = Bitmap.createBitmap(drawable.intrinsicWidth, drawable.intrinsicHeight, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
-        drawable.setBounds(0, 0, canvas.width, canvas.height);
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
         drawable.draw(canvas)
         return bitmap
     }
 
     private fun writeTextOnDrawable(drawableId: Int, text: String, isElectric: Boolean): Bitmap {
         val drawable = ContextCompat.getDrawable(this, drawableId) as GradientDrawable
-        val num = text.toInt()
-        when (num) {
-            0 -> drawable.setColor(ContextCompat.getColor(this,R.color.very_low_disponibility))
-            in 1..6 -> drawable.setColor(ContextCompat.getColor(this,R.color.low_disponibility))
-            in 7..12 -> drawable.setColor(ContextCompat.getColor(this,R.color.normal_disponibility))
-            in 13..18 -> drawable.setColor(ContextCompat.getColor(this,R.color.good_disponibility))
-            else -> drawable.setColor(ContextCompat.getColor(this,R.color.very_good_disponibility))
+        val disponibility = presenter.getAvailabilities(text.toInt())
+        when (disponibility) {
+            AvailabilityType.VERY_LOW -> drawable.setColor(ContextCompat.getColor(this,R.color.very_low_disponibility))
+            AvailabilityType.LOW -> drawable.setColor(ContextCompat.getColor(this,R.color.low_disponibility))
+            AvailabilityType.NORMAL -> drawable.setColor(ContextCompat.getColor(this,R.color.normal_disponibility))
+            AvailabilityType.GOOD -> drawable.setColor(ContextCompat.getColor(this,R.color.good_disponibility))
+            AvailabilityType.VERY_GOOD -> drawable.setColor(ContextCompat.getColor(this,R.color.very_good_disponibility))
         }
         if (isElectric) {
             drawable.setStroke(MARKER_ELECTRIC_STROKE_SIZE, ContextCompat.getColor(this, R.color.electric_bike_marker))
@@ -302,15 +307,7 @@ class MainActivity : AppCompatActivity(), MainView,
         }
         val bitmap = drawableToBitmap(drawable)
         val markerBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
-
-        val paint = Paint()
-        paint.style = Paint.Style.FILL
-        paint.color = Color.WHITE
-        paint.typeface = Typeface.create("Helvetica", Typeface.BOLD)
-        paint.textAlign = Paint.Align.CENTER
-        paint.textSize = convertToPixels(this, MARKER_TEXT_SIZE)
-        paint.getTextBounds(text, 0, text.length, Rect())
-
+        val paint = getPaint(text)
         val canvas = Canvas(markerBitmap)
 
         val x = canvas.width / 2 - 2     //-2 used to regulate x position offset
@@ -322,11 +319,16 @@ class MainActivity : AppCompatActivity(), MainView,
         return markerBitmap
     }
 
-    fun convertToPixels(context: Context, dp: Int): Float {
-        val conversionScale = context.resources.displayMetrics.density
-        return (dp * conversionScale + 0.5f)
+    private fun getPaint(text: String): Paint {
+        val paint = Paint()
+        paint.style = Paint.Style.FILL
+        paint.color = Color.WHITE
+        paint.typeface = Typeface.create("Helvetica", Typeface.BOLD)
+        paint.textAlign = Paint.Align.CENTER
+        paint.textSize = this.convertToPixels(MARKER_TEXT_SIZE)
+        paint.getTextBounds(text, 0, text.length, Rect())
+        return paint
     }
-
 
     private fun getProgress(): ProgressDialog {
         if (progressDialog == null) {
@@ -348,7 +350,11 @@ class MainActivity : AppCompatActivity(), MainView,
     }
 
     override fun showSuccess() {
-        val snackbar = Snackbar.make(coordinator_main, R.string.update_complete, Snackbar.LENGTH_SHORT)
+        showSnackbarMessage(R.string.update_complete)
+    }
+
+    private fun showSnackbarMessage(messageId: Int) {
+        val snackbar = Snackbar.make(coordinator_main, messageId, Snackbar.LENGTH_SHORT)
         snackbar.show()
     }
 
