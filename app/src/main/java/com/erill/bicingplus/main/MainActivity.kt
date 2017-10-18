@@ -142,6 +142,12 @@ class MainActivity : AppCompatActivity(), MainView,
                 presenter.loadStations(currentInfoType)
                 return true
             }
+            R.id.locate_option -> {
+                if (lastLocation != null) {
+                    val cameraUpdate = CameraUpdateFactory.newLatLng(LatLng(lastLocation!!.latitude, lastLocation!!.longitude))
+                    googleMap?.animateCamera(cameraUpdate)
+                }
+            }
         }
         return super.onOptionsItemSelected(item)
     }
